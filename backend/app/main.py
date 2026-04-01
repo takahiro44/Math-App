@@ -7,8 +7,4 @@ app.include_router(question.router, prefix="/question", tags=["question"])
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}{
-      "grade": 0,
-      "unit": "string",
-      "difficulty": "string"
-    }
+    return {"status": "ok"}
