@@ -10,5 +10,9 @@ dependencies = [
     "google-generativeai",
     "pydantic",
     "python-dotenv",
-    "reportlab", 
+    "reportlab",
+    "langchain-community",  # ← 追加
+    "chromadb",             # ← 追加
+    "pypdf",                # ← 追加
+    "langchain-text-splitters",  # ← 追加
 ]
