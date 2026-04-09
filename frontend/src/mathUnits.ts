@@ -1,6 +1,6 @@
 export const mathUnits: Record<string, string[]> = {
   "1": [
-    "正の数・負の数",
+    "正負の数",
     "文字と式",
     "方程式",
   ],

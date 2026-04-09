@@ -5,6 +5,8 @@ import QuestionDisplay from './components/QuestionDisplay'
 import AnswerForm from './components/AnswerForm'
 import GradingResult from './components/GradingResult'
 import AnswerReview from './components/AnswerReview'
+import PrintForm from './components/PrintForm'
+import PrintPreview from './components/PrintPreview'
 
 type QuestionResponse = {
   question: string
@@ -27,6 +29,18 @@ function App() {
   const [userAnswer, setUserAnswer] = useState('')
   const [gradingResult, setGradingResult] = useState<GradingResponse | null>(null)
   const [gradingLoading, setGradingLoading] = useState(false)
+  const [printLoading, setPrintLoading] = useState(false)
+  const [printLoadingNum, setPrintLoadingNum] = useState<number | null>(null)
+  const [printData, setPrintData] = useState<{
+  questions: {
+    question: string
+    answer: string
+    explanation: string
+    hint: string
+  }[]
+  } | null>(null)
+  const [printMode, setPrintMode] = useState<'question' | 'answer' | null>(null)
+
 
   const generateQuestion = async () => {
     setLoading(true)
@@ -73,6 +87,30 @@ function App() {
     }
   }
 
+  const generatePrint = async (numQuestions: number) => {
+    setPrintLoading(true)
+    setPrintLoadingNum(numQuestions)
+    try {
+      const response = await fetch('http://localhost:8000/print/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          grade: Number(grade),
+          unit,
+          difficulty,
+          num_questions: numQuestions,
+        }),
+      })
+      const data = await response.json()
+      setPrintData(data)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setPrintLoading(false)
+      setPrintLoadingNum(null)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="bg-white rounded-xl shadow-md p-8 w-full max-w-lg">
@@ -88,6 +126,14 @@ function App() {
           onUnitChange={setUnit}
           onDifficultyChange={setDifficulty}
           onSubmit={generateQuestion}
+        />
+        <PrintForm
+          grade={grade}
+          unit={unit}
+          difficulty={difficulty}
+          loading={printLoading}
+          loadingNum={printLoadingNum}
+          onSubmit={generatePrint}
         />
         {question && (
           <>
@@ -111,6 +157,15 @@ function App() {
               </>
             )}
           </>
+        )}
+        {printData && (
+          <PrintPreview
+            grade={grade}
+            unit={unit}
+            difficulty={difficulty}
+            questions={printData.questions}
+            onClose={() => setPrintData(null)}
+          />
         )}
       </div>
     </div>
