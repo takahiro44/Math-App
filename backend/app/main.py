@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import question, grading
+from app.routers import question, grading, print as print_router
 
 app = FastAPI()
 
@@ -13,6 +13,7 @@ app.add_middleware(
 
 app.include_router(question.router, prefix="/question", tags=["question"])
 app.include_router(grading.router, prefix="/grading", tags=["grading"])
+app.include_router(print_router.router, prefix="/print", tags=["print"])
 
 @app.get("/health")
 def health():
