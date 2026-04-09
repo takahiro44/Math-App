@@ -2,3 +2,4 @@
 __pycache__/
 .venv/
 rag/vectorstore/
+rag/documents/*.pdf
