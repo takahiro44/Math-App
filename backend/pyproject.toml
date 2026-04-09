@@ -10,4 +10,5 @@ dependencies = [
     "google-generativeai",
     "pydantic",
     "python-dotenv",
+    "reportlab", 
 ]
