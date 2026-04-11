@@ -45,12 +45,16 @@ function PrintPreview({ grade, unit, difficulty, questions, onClose }: Props) {
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
 
+    const titleLabel = mode === 'question'
+    ? `数学プリント_${unit}`
+    : `数学プリント_${unit}_解答解説`
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
-          <title>数学プリント</title>
+          <title>${titleLabel}</title>
           <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
           <style>
             body { font-family: sans-serif; padding: 40px; }
