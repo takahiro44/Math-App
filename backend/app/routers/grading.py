@@ -7,8 +7,18 @@ import re
 
 router = APIRouter()
 
+import re
+
 def normalize(text: str) -> str:
     text = text.strip()
+    # $記号を除去（LaTeX記法対応）
+    text = text.replace('$', '')
+    # \frac{a}{b} → a/b に変換
+    text = re.sub(r'\\frac\{([^}]+)\}\{([^}]+)\}', r'\1/\2', text)
+    # その他のLaTeXコマンドを除去
+    text = re.sub(r'\\[a-zA-Z]+', '', text)
+    # {}を除去
+    text = text.replace('{', '').replace('}', '')
     # 全角を半角に変換
     text = text.replace('＋', '+').replace('－', '-').replace('×', '*').replace('÷', '/')
     # スペースを除去

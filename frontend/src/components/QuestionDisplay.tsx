@@ -39,12 +39,6 @@ function QuestionDisplay({ question }: Props) {
           <MathText text={question.question} />
         </div>
       </div>
-      <div className="bg-yellow-50 rounded-lg p-4">
-        <h2 className="font-bold text-gray-700 mb-2">ヒント</h2>
-        <p className="text-gray-800">
-          <MathText text={question.hint} />
-        </p>
-      </div>
     </div>
   )
 }
