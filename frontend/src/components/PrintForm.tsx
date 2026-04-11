@@ -1,7 +1,4 @@
 type Props = {
-  grade: string
-  unit: string
-  difficulty: string
   loading: boolean
   numQuestions: number
   onNumQuestionsChange: (num: number) => void
@@ -9,26 +6,13 @@ type Props = {
 }
 
 function PrintForm({
-  grade,
-  unit,
-  difficulty,
   loading,
   numQuestions,
   onNumQuestionsChange,
   onSubmit,
 }: Props) {
-  const difficultyLabel =
-    difficulty === 'easy' ? 'やさしい' :
-    difficulty === 'normal' ? '標準' : '難しい'
-
   return (
-    <div className="mt-8">
-      <h2 className="text-lg font-bold text-gray-700 mb-4">
-        問題プリントを作成する
-      </h2>
-      <p className="text-sm text-gray-500 mb-4">
-        中学{grade}年生 / {unit} / {difficultyLabel}
-      </p>
+    <div className="mt-6">
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           問題数：<span className="text-purple-600 font-bold">{numQuestions}問</span>

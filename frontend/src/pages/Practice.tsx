@@ -5,6 +5,8 @@ import QuestionDisplay from '../components/QuestionDisplay'
 import AnswerForm from '../components/AnswerForm'
 import GradingResult from '../components/GradingResult'
 import AnswerReview from '../components/AnswerReview'
+import QuestionForm from '../components/QuestionForm'
+import ModeDescription from '../components/ModeDescription'
 
 type Question = {
   question: string
@@ -134,64 +136,46 @@ function Practice() {
               <h1 className="text-2xl font-bold text-blue-600">演習モード</h1>
             </div>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">学年</label>
-              <select
-                className="w-full border border-gray-300 rounded-lg p-2"
-                value={grade}
-                onChange={(e) => {
-                  setGrade(e.target.value)
-                  setUnit(mathUnits[e.target.value][0])
-                }}
-              >
-                <option value="1">中学1年生</option>
-                <option value="2">中学2年生</option>
-                <option value="3">中学3年生</option>
-              </select>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">単元</label>
-              <select
-                className="w-full border border-gray-300 rounded-lg p-2"
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-              >
-                {mathUnits[grade].map((u) => (
-                  <option key={u} value={u}>{u}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">難易度</label>
-              <select
-                className="w-full border border-gray-300 rounded-lg p-2"
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value)}
-              >
-                <option value="easy">やさしい</option>
-                <option value="normal">標準</option>
-                <option value="hard">難しい</option>
-              </select>
-            </div>
+            <ModeDescription
+              description={
+                <>
+                  <p>学年・単元・難易度を選んで演習を始めましょう。</p>
+                  <p>問題を解いて採点し、解説で理解を深めることができます。</p>
+                </>
+              }
+              steps={[
+                { number: 1, text: '学年・単元・難易度・問題数を選ぶ' },
+                { number: 2, text: '「演習開始」を押すと問題が出題される' },
+                { number: 3, text: '回答を入力して採点する' },
+                { number: 4, text: '全問終了後に結果を確認する' },
+              ]}
+              color="blue"
+            />
+            <QuestionForm
+              grade={grade}
+              unit={unit}
+              difficulty={difficulty}
+              onGradeChange={setGrade}
+              onUnitChange={setUnit}
+              onDifficultyChange={setDifficulty}
+            />
 
             <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                    問題数：<span className="text-blue-600 font-bold">{numQuestions}問</span>
-                </label>
-                <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    value={numQuestions}
-                    onChange={(e) => setNumQuestions(Number(e.target.value))}
-                    className="w-full accent-blue-600"
-                />
-                <div className="flex justify-between text-xs text-gray-400 mt-1">
-                    <span>1問</span>
-                    <span>10問</span>
-                </div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                問題数：<span className="text-blue-600 font-bold">{numQuestions}問</span>
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={numQuestions}
+                onChange={(e) => setNumQuestions(Number(e.target.value))}
+                className="w-full accent-blue-600"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>1問</span>
+                <span>10問</span>
+              </div>
             </div>
 
             <button

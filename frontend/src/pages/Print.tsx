@@ -4,6 +4,7 @@ import { mathUnits } from '../mathUnits'
 import QuestionForm from '../components/QuestionForm'
 import PrintForm from '../components/PrintForm'
 import PrintPreview from '../components/PrintPreview'
+import ModeDescription from '../components/ModeDescription'
 
 type QuestionItem = {
   question: string
@@ -56,6 +57,21 @@ function Print() {
           </button>
           <h1 className="text-2xl font-bold text-purple-600">プリント作成モード</h1>
         </div>
+        <ModeDescription
+          description={
+                <>
+                  <p>学年・単元・難易度と問題数を選んで、問題プリントを作成できます。</p>
+                  <p>解答・解説のプリントも作成できます。</p>
+                </>
+              }
+          steps={[
+            { number: 1, text: '学年・単元・難易度を選ぶ' },
+            { number: 2, text: '問題数をスライダーで選ぶ' },
+            { number: 3, text: '「プリントを作成する」を押す' },
+            { number: 4, text: '問題用紙・解答解説を印刷する' },
+          ]}
+          color="purple"
+        />
         <QuestionForm
           grade={grade}
           unit={unit}
@@ -65,9 +81,6 @@ function Print() {
           onDifficultyChange={setDifficulty}
         />
         <PrintForm
-          grade={grade}
-          unit={unit}
-          difficulty={difficulty}
           loading={printLoading}
           numQuestions={numQuestions}
           onNumQuestionsChange={setNumQuestions}
