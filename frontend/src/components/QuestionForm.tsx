@@ -4,22 +4,18 @@ type Props = {
   grade: string
   unit: string
   difficulty: string
-  loading: boolean
   onGradeChange: (grade: string) => void
   onUnitChange: (unit: string) => void
   onDifficultyChange: (difficulty: string) => void
-  onSubmit: () => void
 }
 
 function QuestionForm({
   grade,
   unit,
   difficulty,
-  loading,
   onGradeChange,
   onUnitChange,
   onDifficultyChange,
-  onSubmit,
 }: Props) {
   return (
     <div>
@@ -74,14 +70,6 @@ function QuestionForm({
         </select>
       </div>
 
-      {/* 生成ボタン */}
-      <button
-        className="w-full bg-blue-600 text-white rounded-lg p-3 font-medium hover:bg-blue-700 disabled:opacity-50"
-        onClick={onSubmit}
-        disabled={loading}
-      >
-        {loading ? '生成中...' : '問題を生成する'}
-      </button>
     </div>
   )
 }

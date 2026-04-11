@@ -20,10 +20,10 @@ function Print() {
   const [printData, setPrintData] = useState<{ questions: QuestionItem[] } | null>(null)
   const [printLoading, setPrintLoading] = useState(false)
   const [printLoadingNum, setPrintLoadingNum] = useState<number | null>(null)
+  const [numQuestions, setNumQuestions] = useState(5)
 
-  const generatePrint = async (numQuestions: number) => {
+  const generatePrint = async () => {
     setPrintLoading(true)
-    setPrintLoadingNum(numQuestions)
     try {
       const response = await fetch('http://localhost:8000/print/generate', {
         method: 'POST',
@@ -41,7 +41,6 @@ function Print() {
       console.error(error)
     } finally {
       setPrintLoading(false)
-      setPrintLoadingNum(null)
     }
   }
 
@@ -61,18 +60,17 @@ function Print() {
           grade={grade}
           unit={unit}
           difficulty={difficulty}
-          loading={false}
           onGradeChange={setGrade}
           onUnitChange={setUnit}
           onDifficultyChange={setDifficulty}
-          onSubmit={() => {}}
         />
         <PrintForm
           grade={grade}
           unit={unit}
           difficulty={difficulty}
           loading={printLoading}
-          loadingNum={printLoadingNum}
+          numQuestions={numQuestions}
+          onNumQuestionsChange={setNumQuestions}
           onSubmit={generatePrint}
         />
         {printData && (
