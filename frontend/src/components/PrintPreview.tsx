@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { InlineMath } from 'react-katex'
+import { InlineMath, BlockMath } from 'react-katex'
 import 'katex/dist/katex.min.css'
 
 type Question = {
@@ -18,10 +18,15 @@ type Props = {
 }
 
 const MathText = ({ text }: { text: string }) => {
-  const parts = text.split(/(\$[^$]+\$)/)
+  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]+\$)/)
+  
   return (
     <>
       {parts.map((part, i) => {
+        if (part.startsWith('$$') && part.endsWith('$$')) {
+          const math = part.slice(2, -2)
+          return <BlockMath key={i} math={math} />
+        }
         if (part.startsWith('$') && part.endsWith('$')) {
           return <InlineMath key={i} math={part.slice(1, -1)} />
         }
