@@ -9,7 +9,7 @@ export const mathUnits: Record<string, string[]> = {
     "連立方程式",
   ],
   "3": [
-    "多項式の計算",
+    "式の展開",
     "因数分解",
     "平方根",
     "二次方程式",

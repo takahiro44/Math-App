@@ -19,6 +19,7 @@ def generate_print(request: PrintRequest):
     context = "\n".join([doc.page_content for doc in docs])
 
     chain = question_prompt | llm | parser
+    
 
     result = chain.invoke({
         "grade": request.grade,
@@ -27,5 +28,7 @@ def generate_print(request: PrintRequest):
         "num_questions": request.num_questions,
         "context": context
     })
+    
+    print(result)
 
     return PrintResponse(questions=result["questions"])
