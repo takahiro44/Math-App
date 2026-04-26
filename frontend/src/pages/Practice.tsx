@@ -236,14 +236,15 @@ function Practice() {
             </div>
 
             {/* 回答入力 */}
-            {!gradingResult && (
-              <AnswerForm
-                userAnswer={userAnswer}
-                loading={gradingLoading}
-                onAnswerChange={setUserAnswer}
-                onSubmit={gradeAnswer}
-              />
-            )}
+            
+            <AnswerForm
+              userAnswer={userAnswer}
+              loading={gradingLoading}
+              disabled={!!gradingResult}
+              onAnswerChange={setUserAnswer}
+              onSubmit={gradeAnswer}
+            />
+            
 
             {/* 採点結果 */}
             {gradingResult && (
