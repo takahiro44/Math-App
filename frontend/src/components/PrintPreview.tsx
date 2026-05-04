@@ -59,12 +59,13 @@ function PrintPreview({ grade, unit, difficulty, questions, onClose }: Props) {
         <head>
           <meta charset="utf-8">
           <title>${titleLabel}</title>
-          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.45/dist/katex.min.css">
           <style>
             body { font-family: sans-serif; padding: 40px; }
             .question-block { margin-bottom: 40px; }
             .answer-line { border-bottom: 1px solid #999; margin-top: 40px; }
             hr { border-color: #ccc; margin: 16px 0; }
+            .katex-mathml { display: none !important; }
           </style>
         </head>
         <body>
