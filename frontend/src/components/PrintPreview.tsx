@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { InlineMath, BlockMath } from 'react-katex'
-import 'katex/dist/katex.min.css'
+import MathText from './MathText'
+
 
 type Question = {
   question: string
@@ -17,23 +17,6 @@ type Props = {
   onClose: () => void
 }
 
-const MathText = ({ text }: { text: string }) => {
-  const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]+\$)/)
-  
-  return (
-    <>
-      {parts.map((part, i) => {
-        if (part.startsWith('$$') && part.endsWith('$$')) {
-          return <BlockMath key={i} math={part.slice(2, -2)} />
-        }
-        if (part.startsWith('$') && part.endsWith('$')) {
-          return <InlineMath key={i} math={part.slice(1, -1)} />
-        }
-        return <span key={i}>{part}</span>
-      })}
-    </>
-  )
-}
 
 function PrintPreview({ grade, unit, difficulty, questions, onClose }: Props) {
   const [mode, setMode] = useState<'question' | 'answer'>('question')
@@ -43,40 +26,49 @@ function PrintPreview({ grade, unit, difficulty, questions, onClose }: Props) {
     difficulty === 'normal' ? '標準' : '難しい'
 
   const handlePrint = () => {
-    const printContent = document.getElementById('print-content')?.innerHTML
-    if (!printContent) return
+  const printContent = document.getElementById('print-content')?.innerHTML
+  if (!printContent) return
 
-    const printWindow = window.open('', '_blank')
-    if (!printWindow) return
+  const printWindow = window.open('', '_blank')
+  if (!printWindow) return
 
-    const titleLabel = mode === 'question'
+  const titleLabel = mode === 'question'
     ? `数学プリント_${unit}`
     : `数学プリント_${unit}_解答解説`
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>${titleLabel}</title>
-          <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.45/dist/katex.min.css">
-          <style>
-            body { font-family: sans-serif; padding: 40px; }
-            .question-block { margin-bottom: 40px; }
-            .answer-line { border-bottom: 1px solid #999; margin-top: 40px; }
-            hr { border-color: #ccc; margin: 16px 0; }
-            .katex-mathml { display: none !important; }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-      </html>
-    `)
-    printWindow.document.close()
-    printWindow.focus()
-    printWindow.print()
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <title>${titleLabel}</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+        <style>
+          body { font-family: sans-serif; padding: 40px; }
+          .question-block { margin-bottom: 40px; }
+          .answer-line { border-bottom: 1px solid #999; margin-top: 40px; }
+          hr { border-color: #ccc; margin: 16px 0; }
+          .katex-mathml { display: none !important; }
+        </style>
+      </head>
+      <body>
+        ${printContent}
+      </body>
+    </html>
+  `)
+  printWindow.document.close()
+  printWindow.focus()
+
+  // フォントの読み込みが完了してから印刷ダイアログを開く
+  if (printWindow.document.fonts && printWindow.document.fonts.ready) {
+    printWindow.document.fonts.ready.then(() => {
+      printWindow.print()
+    })
+  } else {
+    // 古いブラウザ向けのフォールバック：少し待ってから印刷
+    setTimeout(() => printWindow.print(), 500)
   }
+}
 
   return (
     <div
