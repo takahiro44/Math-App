@@ -32,6 +32,8 @@ def _restore_latex_escapes(text: str) -> str:
     }
     for broken, fixed in replacements.items():
         text = text.replace(broken, fixed)
+    
+    text = text.replace('\\-', '-')
     return text
 
 
