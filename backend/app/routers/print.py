@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.schemas.print import PrintRequest, PrintResponse
-from app.prompts.question import question_prompt, parser
+from app.prompts.question import question_prompt, parser, get_difficulty_guideline
 from app.rag.retriever import get_retriever
 import os
 
@@ -25,6 +25,7 @@ def generate_print(request: PrintRequest):
         "grade": request.grade,
         "unit": request.unit,
         "difficulty": request.difficulty,
+        "difficulty_guideline": get_difficulty_guideline(request.difficulty),
         "num_questions": request.num_questions,
         "context": context
     })
