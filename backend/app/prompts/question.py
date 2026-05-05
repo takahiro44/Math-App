@@ -29,8 +29,6 @@ def _restore_latex_escapes(text: str) -> str:
     """
     replacements = {
         '\x0crac': r'\\frac',    # \f + rac → \\frac
-        # 他の制御文字も増えそうなら追加していく
-        # 例: '\trightarrow' (\t は \tau や \times で使われる場合あり)
     }
     for broken, fixed in replacements.items():
         text = text.replace(broken, fixed)
@@ -52,6 +50,43 @@ _single_json_parser = JsonOutputParser(pydantic_object=QuestionResponse)
 single_parser = RunnableLambda(_preprocess) | _single_json_parser
 
 
+# ④ 難易度ごとの詳細ガイドライン
+DIFFICULTY_GUIDELINES = {
+    "easy": """
+- やさしい：その単元を習いたての段階の問題
+- 計算の手順は最小限で、定義や基本ルールが正しく使えれば解ける
+- 例（中1・正負の数）：(-3) + 5、(-4) × 2 のような1ステップで解ける問題
+- 例（中3・因数分解）：x^2 + 5x + 6 のような単純な共通因数や基本的な因数分解
+""",
+    "normal": """
+- 標準：定期テストに出題される普通のレベル
+- 教科書の例題や基本問題と同程度。決して難しくはなく、本当に「普通の問題」
+- 例（中1・方程式）：3(x - 4) = 9 のような分配法則 + 移項を含む問題
+- 例（中3・因数分解）：x^2 + 3x - 18 のような典型的な因数分解
+- 例（中2・連立方程式）：加減法または代入法ですぐ解ける2元1次連立方程式
+""",
+    "hard": """
+- 難しい：計算の過程が多い問題
+- 複数の手順を組み合わせる必要があり、ミスをしやすい
+- ただし高校レベルの内容や、その単元の範囲外の知識は使わない
+- 中学校で習う公式や手順の範囲内で完結すること
+- 例（中3・式の計算）：分子に多項式があり、分母が異なる分数式の通分が必要なもの
+- 例（中1・方程式）：分数を含む方程式で、両辺を最小公倍数で払う必要があるもの
+- 例（中3・因数分解）：4x^2 + 12x + 9 のような、係数の工夫が必要なもの
+"""
+}
+
+
+# ⑤ 難易度パラメータ → ガイドライン文字列の変換関数
+def get_difficulty_guideline(difficulty: str) -> str:
+    """
+    難易度パラメータ（"easy"/"normal"/"hard"）を、
+    LLMに渡す詳細なガイドライン文字列に変換する。
+    未知の値が来た場合は "normal" のガイドラインをフォールバックとして返す。
+    """
+    return DIFFICULTY_GUIDELINES.get(difficulty, DIFFICULTY_GUIDELINES["normal"])
+
+
 question_prompt = PromptTemplate(
     template="""
 あなたは中学校の数学教師です。
@@ -63,6 +98,9 @@ question_prompt = PromptTemplate(
 
 【学習指導要領の参考情報】
 {context}
+
+【難易度の基準】
+{difficulty_guideline}
 
 【重要な制約】
 - 上記の学習指導要領の内容に沿った問題を出題してください
@@ -86,7 +124,7 @@ question_prompt = PromptTemplate(
 以下のJSON形式で返してください。
 {format_instructions}
 """,
-    input_variables=["grade", "unit", "difficulty", "num_questions", "context"],
+    input_variables=["grade", "unit", "difficulty", "difficulty_guideline", "num_questions", "context"],  # ★
     partial_variables={"format_instructions": _json_parser.get_format_instructions()}
 )
 
@@ -102,6 +140,9 @@ single_question_prompt = PromptTemplate(
 
 【学習指導要領の参考情報】
 {context}
+
+【難易度の基準】
+{difficulty_guideline}
 
 【重要な制約】
 - 上記の学習指導要領の内容に沿った問題を出題してください
@@ -122,6 +163,6 @@ single_question_prompt = PromptTemplate(
 以下のJSON形式で返してください。
 {format_instructions}
 """,
-    input_variables=["grade", "unit", "difficulty", "context"],
+    input_variables=["grade", "unit", "difficulty", "difficulty_guideline", "context"],  # ★
     partial_variables={"format_instructions": _single_json_parser.get_format_instructions()}
 )

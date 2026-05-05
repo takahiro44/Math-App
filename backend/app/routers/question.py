@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.schemas.question import QuestionRequest, QuestionResponse
-from app.prompts.question import single_question_prompt, single_parser
+from app.prompts.question import single_question_prompt, single_parser,get_difficulty_guideline
 from app.rag.retriever import get_retriever
 import os
 
@@ -24,6 +24,7 @@ def generate_question(request: QuestionRequest):
         "grade": request.grade,
         "unit": request.unit,
         "difficulty": request.difficulty,
+        "difficulty_guideline": get_difficulty_guideline(request.difficulty),
         "context": context
     })
 
