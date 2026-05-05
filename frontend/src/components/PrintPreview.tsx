@@ -116,12 +116,11 @@ function PrintPreview({ grade, unit, difficulty, questions, onClose }: Props) {
             </p>
             <hr className="border-black mb-6" />
             {questions.map((q, i) => (
-              <div key={i} className="mb-10 question-block">
+              <div key={i} className="mb-16 question-block">
                 <p className="font-bold mb-2">問{i + 1}.</p>
                 <p className="mb-4 leading-relaxed">
                   <MathText text={q.question} />
                 </p>
-                <div className="border-b border-gray-400 mt-10 answer-line" />
               </div>
             ))}
           </div>
