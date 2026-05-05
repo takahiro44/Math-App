@@ -61,12 +61,12 @@ function PrintPreview({ grade, unit, difficulty, questions, onClose }: Props) {
 
   // フォントの読み込みが完了してから印刷ダイアログを開く
   if (printWindow.document.fonts && printWindow.document.fonts.ready) {
-    printWindow.document.fonts.ready.then(() => {
-      printWindow.print()
-    })
+  printWindow.document.fonts.ready.then(() => {
+    setTimeout(() => printWindow.print(), 300)
+  })
   } else {
-    // 古いブラウザ向けのフォールバック：少し待ってから印刷
-    setTimeout(() => printWindow.print(), 500)
+  // 古いブラウザ向けのフォールバック：少し待ってから印刷
+  setTimeout(() => printWindow.print(), 500)
   }
 }
 
