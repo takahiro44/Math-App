@@ -5,6 +5,7 @@ import QuestionForm from '../components/QuestionForm'
 import PrintForm from '../components/PrintForm'
 import PrintPreview from '../components/PrintPreview'
 import ModeDescription from '../components/ModeDescription'
+import { API_BASE_URL } from '../config'
 
 type QuestionItem = {
   question: string
@@ -26,7 +27,7 @@ function Print() {
   const generatePrint = async () => {
     setPrintLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/print/generate', {
+      const response = await fetch(`${API_BASE_URL}/print/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
