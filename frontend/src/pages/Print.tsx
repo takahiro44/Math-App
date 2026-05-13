@@ -21,7 +21,6 @@ function Print() {
   const [difficulty, setDifficulty] = useState('normal')
   const [printData, setPrintData] = useState<{ questions: QuestionItem[] } | null>(null)
   const [printLoading, setPrintLoading] = useState(false)
-  const [printLoadingNum, setPrintLoadingNum] = useState<number | null>(null)
   const [numQuestions, setNumQuestions] = useState(5)
 
   const generatePrint = async () => {

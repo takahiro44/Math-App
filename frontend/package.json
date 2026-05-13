@@ -7,11 +7,11 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview --host 0.0.0.0 --port 5173"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
-    "katex": "^0.16.44",
+    "katex": "^0.16.22",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-katex": "^3.1.0",
