@@ -7,4 +7,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    // minify を無効化（KaTeXのレンダリング問題対策）
+    minify: false,
+  },
 })

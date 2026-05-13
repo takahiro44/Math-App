@@ -7,5 +7,10 @@ RUN npm install
 
 COPY . .
 
+# 本番用にビルド
+RUN npm run build
+
 EXPOSE 5173
-CMD ["npm", "run", "dev", "--", "--host"]
+
+# preview サーバーで配信
+CMD ["npm", "run", "preview"]

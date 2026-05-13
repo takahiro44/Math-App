@@ -12,22 +12,21 @@ type Props = {
  * - それ以外は通常テキスト
  * - 通常テキスト中の \n（改行コード）と "\\n"（バックスラッシュ+n の文字列）は改行として扱う
  */
+
 function MathText({ text }: Props) {
-  // $...$ または $$...$$ でテキストを分割
+  
   const parts = text.split(/(\$\$[\s\S]*?\$\$|\$[^$]+\$)/)
 
   return (
     <>
       {parts.map((part, i) => {
-        // ブロック数式
         if (part.startsWith('$$') && part.endsWith('$$')) {
           return <BlockMath key={i} math={part.slice(2, -2)} />
         }
-        // インライン数式
         if (part.startsWith('$') && part.endsWith('$')) {
-          return <InlineMath key={i} math={part.slice(1, -1)} />
+          const mathStr = part.slice(1, -1)
+          return <InlineMath key={i} math={mathStr} />
         }
-        // 通常テキスト：\n を改行に変換して表示
         return <PlainTextWithLineBreaks key={i} text={part} />
       })}
     </>
@@ -40,10 +39,11 @@ function MathText({ text }: Props) {
  * - LLM が文字列としてリテラル "\n" を返してしまった場合にも対応（保険）
  */
 function PlainTextWithLineBreaks({ text }: { text: string }) {
-  // まず文字列リテラルとしての "\n" を実際の改行に変換（LLM出力の保険）
-  const normalized = text.replace(/\\n/g, '\n')
+  // \\n (バックスラッシュ + n) を改行に変換
+  let normalized = text.replace(/\\n/g, '\n')
+  // \\ (バックスラッシュ2個、LaTeXの改行) も改行に変換
+  normalized = normalized.replace(/\\\\/g, '\n')
 
-  // 改行で分割して、間に <br /> を挟む
   const lines = normalized.split('\n')
 
   return (
