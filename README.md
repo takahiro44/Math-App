@@ -19,18 +19,21 @@
 - 数式はKaTeXで正しくレンダリング
 
 ### RAG（学習指導要領連携）
-- 文部科学省の学習指導要領PDFを参照して単元に沿った問題を生成
+- 文部科学省の学習指導要領解説を参照して単元に沿った問題を生成
 - 習っていない範囲の問題が出題されにくくなる
+- 埋め込みは事前計算してリポジトリに同梱。実行時はベクトルDBも永続ディスクも不要
 
 ## 対象単元
 
 | 学年 | 単元 |
 |------|------|
-| 中学1年生 | 正の数・負の数、文字と式、方程式 |
+| 中学1年生 | 正負の数、文字と式、方程式 |
 | 中学2年生 | 式の計算、連立方程式 |
-| 中学3年生 | 多項式の計算、平方根、二次方程式 |
+| 中学3年生 | 式の展開、因数分解、平方根、二次方程式 |
 
 > 図形の描写やグラフの読み取りを必要とする問題は対象外。計算問題に特化しています。
+
+単元マスタは `frontend/src/mathUnits.ts` が正。この表はその写しなので、追加・改名したら両方直してください。
 
 ## 技術スタック
 
@@ -38,7 +41,7 @@
 - **FastAPI** - APIサーバー
 - **LangChain** - LLMオーケストレーション（PromptTemplate / LCEL / OutputParser）
 - **Gemini 2.5 Flash** - 問題生成・採点
-- **ChromaDB** - ベクトルデータベース（RAG用）
+- **NumPy** - 事前計算した埋め込みに対するコサイン類似度検索（RAG用）
 - **uv** - パッケージ管理
 
 ### フロントエンド
@@ -71,25 +74,16 @@ cp .env.example .env
 # .env を編集して GOOGLE_API_KEY を設定
 ```
 
-**3. 学習指導要領PDFを配置**
-
-以下のURLからPDFをダウンロードして `rag/documents/math_guidelines.pdf` に配置してください。
-
-```
-https://www.mext.go.jp/content/1413522_007.pdf
-```
-
-**4. Dockerビルド・起動**
+**3. Dockerビルド・起動**
 ```bash
 docker compose up --build -d
 ```
 
-**5. RAGのベクトル化（初回のみ）**
-```bash
-docker compose exec backend uv run python -m app.rag.ingest
-```
+検索インデックス（`backend/app/rag/data/`）はリポジトリに同梱されているので、
+セットアップ時のベクトル化は不要です。指導要領PDFの差し替え時のみ
+[検索インデックスの再構築](#検索インデックスの再構築) を実行してください。
 
-**6. アクセス確認**
+**4. アクセス確認**
 
 | サービス | URL |
 |---------|-----|
@@ -139,13 +133,48 @@ docker compose down
 # バックエンドのログ確認
 docker compose logs backend
 
-# RAGの再ベクトル化
-docker compose exec backend uv run python -m app.rag.ingest
-
 # パッケージ追加後の再ビルド
 docker compose up --build -d
 ```
 
+## 検索インデックスの再構築
+
+指導要領PDFを差し替えたときだけ実行します。通常の開発・デプロイでは不要です。
+
+**1. PDFを配置**
+
+以下のURLからダウンロードして `rag/documents/math_guidelines.pdf` に配置します。
+
+```
+https://www.mext.go.jp/component/a_menu/education/micro_detail/__icsFiles/afieldfile/2019/03/18/1387018_004.pdf
+```
+
+文部科学省「中学校学習指導要領（平成29年告示）解説 数学編」（全229ページ）です。
+
+**2. インデックスを構築**
+
+```bash
+cd backend
+uv run --group build python scripts/build_index.py
+```
+
+`backend/app/rag/data/` に以下の2ファイルが出力されます。どちらもリポジトリにコミットします。
+
+| ファイル | 内容 |
+|---------|------|
+| `guidelines_vectors.npz` | 埋め込み行列（float32・L2正規化済み） |
+| `guidelines_chunks.json` | チャンク本文・ページ番号・出典情報 |
+
+埋め込みAPIのレート制限で中断しても、チェックポイントから再開されるので再実行すれば続きから進みます。
+
+## 出典
+
+出典：「【数学編】中学校学習指導要領（平成29年告示）解説」（文部科学省）
+https://www.mext.go.jp/component/a_menu/education/micro_detail/__icsFiles/afieldfile/2019/03/18/1387018_004.pdf
+（2026年7月25日に利用）
+
+本コンテンツは文部科学省ウェブサイト利用規約（政府標準利用規約第2.0版準拠、CC BY 4.0互換）に基づき利用しています。
+
 ## ライセンス
 
-MIT
+MIT（上記の出典に基づく引用部分を除く）
