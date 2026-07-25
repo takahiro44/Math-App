@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.schemas.print import PrintRequest, PrintResponse
 from app.prompts.question import question_prompt, parser, get_difficulty_guideline
-from app.rag.retriever import get_retriever
+from app.rag.retriever import retrieve
 import os
 
 # ===== [PERF] instrumentation start (計測専用・削除可) =====
@@ -20,6 +20,8 @@ if not perf_logger.handlers:
     perf_logger.propagate = False
 # ===== [PERF] instrumentation end =====
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 @router.post("/generate", response_model=PrintResponse)
@@ -32,26 +34,21 @@ def generate_print(request: PrintRequest):
         google_api_key=os.getenv("GOOGLE_API_KEY")
     )
 
-    # ===== [PERF] RAG: retriever 構築 + 検索 (リクエストごとに1回) =====
-    _t_build_start = time.perf_counter()
-    retriever = get_retriever()
-    _t_build_end = time.perf_counter()
-
+    # ===== [PERF] RAG 検索 (リクエストごとに1回) =====
+    # インデックスはモジュールロード時に読み込み済みなので構築コストはない。
+    # クエリ埋め込みは lru_cache されるため、2回目以降は API 呼び出しなし。
     _t_search_start = time.perf_counter()
-    docs = retriever.invoke(f"中学{request.grade}年生 {request.unit}")
+    docs = retrieve(f"中学{request.grade}年生 {request.unit}")
     _t_search_end = time.perf_counter()
 
-    _retriever_build_s = _t_build_end - _t_build_start
-    _rag_search_s = _t_search_end - _t_search_start
-    _search_total_s = _retriever_build_s + _rag_search_s
-    perf_logger.info("[PERF] retriever_build took %.3fs", _retriever_build_s)
+    _search_total_s = _t_search_end - _t_search_start
     perf_logger.info(
         "[PERF] rag_search took %.3fs (calls=1, docs=%d)",
-        _rag_search_s, len(docs),
+        _search_total_s, len(docs),
     )
     # ===== [PERF] RAG 計測ここまで =====
 
-    context = "\n".join([doc.page_content for doc in docs])
+    context = "\n".join(docs)
 
     chain = question_prompt | llm | parser
 
@@ -76,7 +73,7 @@ def generate_print(request: PrintRequest):
     perf_logger.info("[PERF] llm_total took %.3fs (invokes=1)", _llm_total_s)
     # ===== [PERF] LLM 計測ここまで =====
 
-    print(result)
+    logger.debug("generate_print result: %s", result)
 
     # ===== [PERF] endpoint 全体 + 内訳の集計 =====
     _t_endpoint_end = time.perf_counter()

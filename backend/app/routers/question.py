@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.schemas.question import QuestionRequest, QuestionResponse
 from app.prompts.question import single_question_prompt, single_parser,get_difficulty_guideline
-from app.rag.retriever import get_retriever
+from app.rag.retriever import retrieve
 import os
 
 router = APIRouter()
@@ -14,9 +14,8 @@ def generate_question(request: QuestionRequest):
         google_api_key=os.getenv("GOOGLE_API_KEY")
     )
 
-    retriever = get_retriever()
-    docs = retriever.invoke(f"中学{request.grade}年生 {request.unit}")
-    context = "\n".join([doc.page_content for doc in docs])
+    docs = retrieve(f"中学{request.grade}年生 {request.unit}")
+    context = "\n".join(docs)
 
     chain = single_question_prompt | llm | single_parser
 

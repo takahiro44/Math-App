@@ -7,12 +7,18 @@ dependencies = [
     "uvicorn",
     "langchain",
     "langchain-google-genai",
-    "google-generativeai",
     "pydantic",
     "python-dotenv",
-    "reportlab",
-    "langchain-community",  # ← 追加
-    "chromadb",             # ← 追加
-    "pypdf",                # ← 追加
-    "langchain-text-splitters",  # ← 追加
+    "numpy",
+]
+
+[dependency-groups]
+# インデックス構築 (scripts/build_index.py) 専用。実行時には不要。
+build = [
+    "pypdf",
+    "langchain-text-splitters",
+]
+# 開発用スクリプト専用（app/check_models.py が埋め込み対応モデルを一覧する）。
+dev = [
+    "google-generativeai",
 ]
