@@ -1,7 +1,20 @@
+import logging
 import os
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from app.routers import question, grading, print as print_router
+import sys
+
+# uvicorn は root logger を設定しないので、app.* のログが stdout に出るよう自分で設定する。
+# これがないと retriever の [RAG] ログ（検索結果の目視確認用）やインデックス読み込み
+# 失敗の error ログが消える。retriever はモジュールロード時にインデックスを読むので、
+# ルータの import より前に設定しておく必要がある。
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO"),
+    stream=sys.stdout,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from app.routers import question, grading, print as print_router  # noqa: E402
 
 app = FastAPI()
 
