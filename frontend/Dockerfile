@@ -1,3 +1,6 @@
+# これは docker compose（開発環境）専用。
+# 本番のフロントエンドは Vercel が直接ビルド・配信するので、この Dockerfile は使わない。
+# 手順は docs/deploy.md を参照。
 FROM node:20-slim
 
 WORKDIR /app

@@ -1,0 +1,44 @@
+name: keep-alive
+
+# Cloud Run を min-instances 0 で運用しているため、アイドル後の初回リクエストで
+# langchain の import に数秒かかる。定期的に /health を叩いてインスタンスを温めておく。
+#
+# 前提: リポジトリ変数 BACKEND_URL に Cloud Run の URL を設定しておくこと
+#       （Settings > Secrets and variables > Actions > Variables）
+#       例: https://math-app-backend-xxxxxxxxxx.asia-northeast1.run.app
+#
+# 注意: GitHub の scheduled workflow はリポジトリが60日間非アクティブだと自動停止する。
+#       停止したら Actions 画面から手動で再有効化する必要がある。
+#       また cron の実行時刻は混雑状況により数分〜十数分遅延することがある。
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /health
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "::error::リポジトリ変数 BACKEND_URL が設定されていません"
+            exit 1
+          fi
+
+          # コールドスタート時は応答に数秒かかるので、リトライしつつ待つ。
+          # /health は認証・レートリミットの免除対象なのでヘッダは不要。
+          code=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --retry 3 --retry-delay 5 --retry-all-errors \
+            --max-time 30 \
+            "${BACKEND_URL%/}/health")
+
+          echo "HTTP $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::/health が $code を返しました"
+            exit 1
+          fi

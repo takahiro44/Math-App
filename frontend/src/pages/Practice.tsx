@@ -7,7 +7,7 @@ import GradingResult from '../components/GradingResult'
 import AnswerReview from '../components/AnswerReview'
 import QuestionForm from '../components/QuestionForm'
 import ModeDescription from '../components/ModeDescription'
-import { API_BASE_URL } from '../config'
+import { apiFetch } from '../config'
 
 type Question = {
   question: string
@@ -48,9 +48,8 @@ function Practice() {
   const startPractice = async () => {
     setState('loading')
     try {
-      const response = await fetch(`${API_BASE_URL}/print/generate`, {
+      const response = await apiFetch('/print/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           grade: Number(grade),
           unit,
@@ -74,9 +73,8 @@ function Practice() {
     if (!currentQuestion) return
     setGradingLoading(true)
     try {
-      const response = await fetch(`${API_BASE_URL}/grading/grade`, {
+      const response = await apiFetch('/grading/grade', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: currentQuestion.question,
           correct_answer: currentQuestion.answer,

@@ -1,3 +1,5 @@
+# これは開発環境専用。
+# 本番はバックエンドが Cloud Run、フロントエンドが Vercel。手順は docs/deploy.md を参照。
 services:
   backend:
     build: ./backend
@@ -9,7 +11,10 @@ services:
       - ./rag/documents:/app/rag/documents
     env_file:
       - .env
-    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # 本番の CMD（reload なし・PORT 環境変数対応）を、開発用に --reload 付きで上書きする。
+    # `uv run` は使わない。非rootで動かしているため /app/.venv に書き込めず、
+    # `uv run` が起動時に環境を同期しようとして失敗する。venv の uvicorn を直叩きする。
+    command: .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
   frontend:
     build: ./frontend
