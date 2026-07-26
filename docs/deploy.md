@@ -28,8 +28,17 @@
 | Cloud Run サービス | `math-app-backend` |
 | **バックエンド URL** | https://math-app-backend-1061641828981.asia-northeast1.run.app |
 | Artifact Registry | `cloud-run-source-deploy`（最新3世代保持ポリシー適用済み） |
-| シークレット | `GOOGLE_API_KEY`（`APP_PASSCODE` は未設定＝認証なし） |
-| フロントエンド | **未デプロイ** |
+| シークレット | `GOOGLE_API_KEY` / `APP_PASSCODE` |
+| 予算アラート | 月1,000円・50%/90%/100% で通知 |
+| Vercel チーム | `takahiro44s-projects` |
+| **フロントエンド URL** | https://math-app-chi-eight.vercel.app |
+| `ALLOWED_ORIGINS` | `https://math-app-chi-eight.vercel.app` |
+| `ALLOWED_ORIGIN_REGEX` | `https://math-[a-z0-9-]+-takahiro44s-projects\.vercel\.app` |
+
+Vercel のデプロイURLは `https://math-<hash>-takahiro44s-projects.vercel.app` の形式で、
+プロジェクト名が `math-app` でも `math-` に切り詰められる。正規表現はこれに合わせてある。
+
+**残作業**: GitHub のリポジトリ変数 `BACKEND_URL` の設定（keep-alive 用）。
 
 ---
 
