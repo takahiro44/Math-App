@@ -35,14 +35,40 @@ cd backend && uv run --group build python scripts/build_index.py   # インデ�
 ```
 
 - フロント: http://localhost:5173 / バックエンド: http://localhost:8000 / API docs: http://localhost:8000/docs
-- バックエンドは `--reload` で起動し、`backend/app` がマウントされているのでコード変更は即反映される。
-- フロントエンドの lint: `docker compose exec frontend npm run lint`（または `frontend/` で `npm run lint`）。テストフレームワークは未導入。
-- 本番ビルド: `frontend/` で `npm run build`（`tsc -b && vite build`）。フロントは vite preview で配信される。
+- バックエンドは compose の `command` で `--reload` を付けて起動し、`backend/app` がマウントされているのでコード変更は即反映される。
+- **compose の command で `uv run` は使えない。** コンテナは非rootで動くため `/app/.venv` に書き込めず、`uv run` が起動時に環境を同期しようとして失敗する。`.venv/bin/uvicorn` を直叩きしている。
+- フロントエンドの lint: `docker compose exec frontend npm run lint`。**現状 `no-irregular-whitespace` で6件失敗する**（全角スペース。今回のリファクタ以前から存在）。テストフレームワークは未導入。
+- compose のフロントは `frontend/` をマウントしていないので、フロントのコード変更は `docker compose up --build -d` が必要。
 
-## 環境変数（必須）
+## デプロイ
 
-- ルート `.env`: `GOOGLE_API_KEY`（Gemini + Embedding 用）。任意で `ALLOWED_ORIGINS`（CORS、カンマ区切り、デフォルト `http://localhost:5173`）。
-- フロント `frontend/.env` / `.env.production`: `VITE_API_BASE_URL`。**未設定だと API 呼び出しが壊れる**（`config.ts` がそのまま参照するだけでフォールバックなし）。
+フロントエンドは **Vercel**、バックエンドは **Google Cloud Run**。手順は `docs/deploy.md`。compose は開発専用。
+
+- `backend/Dockerfile` の `CMD` は `--reload` なしで、**Cloud Run が渡す環境変数 `PORT`**（デフォルト8080）を `sh -c` 経由で受ける。非rootユーザー `appuser` で動く。
+- `frontend/Dockerfile` は compose 専用。本番では Vercel が直接ビルドするので使わない。
+- `--max-instances` は API キー乱用時のコスト上限として機能させるため低く抑える（3）。
+
+## 環境変数
+
+`.env.example` / `frontend/.env.example` に全項目とデフォルト値を記載してある。
+
+バックエンド（ルート `.env` / Cloud Run）:
+
+| 変数 | 必須 | 備考 |
+|---|---|---|
+| `GOOGLE_API_KEY` | ✅ | Gemini + Embedding |
+| `ALLOWED_ORIGINS` | | CORS 完全一致（カンマ区切り）。デフォルト `http://localhost:5173,http://localhost:4173` |
+| `ALLOWED_ORIGIN_REGEX` | | Vercel プレビューの動的ドメイン用。デフォルトなし |
+| `APP_PASSCODE` | | 公開デモ用の共有パスコード。**未設定なら認証なし**（開発時はこれ） |
+| `RATE_LIMIT_PER_MINUTE` | | デフォルト20、`0` で無効 |
+| `LOG_LEVEL` | | デフォルト INFO |
+
+フロント（`frontend/.env` / Vercel）:
+
+| 変数 | 備考 |
+|---|---|
+| `VITE_API_BASE_URL` | 開発時は未設定なら `http://localhost:8000` にフォールバック。**本番ビルドでは未設定だと `vite.config.ts` がビルドを失敗させる** |
+| `VITE_APP_PASSCODE` | バックエンドの `APP_PASSCODE` と同じ値。**ビルド成果物に埋め込まれ DevTools から見える**（bot 対策であって秘密の保護ではない） |
 
 ## Architecture
 
@@ -52,6 +78,20 @@ cd backend && uv run --group build python scripts/build_index.py   # インデ�
 - `POST /print/generate` — 複数問を一括生成（`question_prompt`）。**演習モードもこの一括生成エンドポイントを使う**（フロントの `Practice.tsx` が `/print/generate` を叩き、取得した全問をクライアント側で1問ずつ出題する）。`/question/generate` は現状フロントから未使用。
 - `POST /grading/grade` — 採点。
 - 各層は `routers/` `prompts/` `schemas/` に分かれ、単元ごとではなく機能ごとに分割されている。
+
+### ミドルウェア（`app/middleware.py`）— 公開デモの事故防止
+`PasscodeAuthMiddleware`（共有パスコード）と `RateLimitMiddleware`（IPごと・インメモリ）。**どちらも環境変数が未設定なら無効**になり、開発を妨げない。セキュリティ機構ではなく Gemini API キー乱用の事故防止が目的。
+
+壊れやすい点が3つある。
+
+- **`add_middleware` の順序**: Starlette は**最後に追加したものが最も外側**になる。CORS を最後に追加していないと 401/429 のレスポンスに CORS ヘッダが付かず、ブラウザ側では原因不明の「CORS エラー」になる。`main.py` は認証 → レートリミット → CORS の順で追加している。
+- **`OPTIONS` の免除**: CORS プリフライトはカスタムヘッダを載せてこない。認証で弾くとブラウザからのリクエストが全滅する。
+- **クライアントIPは `X-Forwarded-For` の左端**から取る。Cloud Run はプロキシ経由なので `request.client.host` はプロキシのIPになり、全リクエストが同一IPに見えてレートリミットが機能しない。
+
+`/health` は認証・レートリミットの両方を免除している（keep-alive の cron が叩くため）。レートリミットはプロセス単位なので、インスタンスが増えると実効上限も増える（許容済み）。
+
+### コールドスタート対策
+Cloud Run を `min-instances 0` で運用するため、`.github/workflows/keep-alive.yml` が10分ごとに `/health` を叩く。リポジトリ変数 `BACKEND_URL` が必要。`lru_cache` はプロセス単位なので、インスタンスが入れ替わると埋め込みクエリのキャッシュは失われ cold のレイテンシ（約0.5秒）を再度払う（許容済み）。
 
 ### RAG フロー（事前計算 + numpy。ベクトルDBは使わない）
 **バックエンドはステートレス**で、永続ディスクを必要としない。埋め込みをビルド時に固めてリポジトリに同梱し、実行時は numpy の行列積で検索する。
@@ -85,7 +125,12 @@ cd backend && uv run --group build python scripts/build_index.py   # インデ�
 - 数式表示が崩れる不具合は、この3箇所のどこかのエスケープ処理が原因であることが多い。
 
 ### フロントエンド
+- **API 呼び出しは `config.ts` の `apiFetch(path, init)` を使う。** `fetch` を直接呼ばないこと。ベースURLの結合・`Content-Type`・パスコードヘッダの付与をここに集約している。
 - ルーティングは `App.tsx`: `/`(Home) `/practice` `/print` の3ページ。
 - 単元マスタは `frontend/src/mathUnits.ts`（学年→単元名の配列）。バックエンドにはこの一覧はなく、フロントから `unit` 文字列として渡される。
 - 難易度は `easy`/`normal`/`hard` の文字列で送られ、バックエンドの `get_difficulty_guideline()`（`prompts/question.py`）が詳細ガイドライン文字列に展開してプロンプトに埋め込む。
 - 演習の状態遷移は `Practice.tsx` の `PracticeState`（`setup`→`loading`→`practicing`→`result`）で管理し、正誤はクライアント側で集計する。
+
+## ライセンスの適用範囲
+
+ソースコードは MIT（`LICENSE`）。ただし **`backend/app/rag/data/` のデータは MIT の対象外**で、文部科学省ウェブサイト利用規約（政府標準利用規約第2.0版準拠、CC BY 4.0互換）に基づき利用しており**出典表示が必要**。詳細は `backend/app/rag/data/README.md`。「指導要領準拠」が売りなので、出典表記を壊さないこと。
