@@ -177,4 +177,11 @@ https://www.mext.go.jp/component/a_menu/education/micro_detail/__icsFiles/afield
 
 ## ライセンス
 
-MIT（上記の出典に基づく引用部分を除く）
+適用範囲がファイルによって異なります。
+
+| 対象 | ライセンス |
+|------|-----------|
+| ソースコード（上記データを除くリポジトリ全体） | **MIT** — [LICENSE](LICENSE) |
+| `backend/app/rag/data/guidelines_chunks.json`<br>`backend/app/rag/data/guidelines_vectors.npz` | **文部科学省ウェブサイト利用規約**（政府標準利用規約第2.0版準拠、CC BY 4.0互換）に基づき利用。**出典表示が必要** |
+
+`backend/app/rag/data/` のデータは学習指導要領解説から機械的に抽出したもので、このリポジトリの著作物ではありません。出典は上記「[出典](#出典)」のとおりです。詳細は [`backend/app/rag/data/README.md`](backend/app/rag/data/README.md) に記載しています。
