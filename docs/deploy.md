@@ -19,6 +19,18 @@
 「バックエンドを先にデプロイ → URL を得る → Vercel をデプロイ → その URL で
 バックエンドの環境変数を更新」の順で進める。
 
+## 現在の構成（2026-07-26 時点）
+
+| 項目 | 値 |
+|------|-----|
+| GCP プロジェクト | `math-app-backend` |
+| リージョン | `asia-northeast1` |
+| Cloud Run サービス | `math-app-backend` |
+| **バックエンド URL** | https://math-app-backend-1061641828981.asia-northeast1.run.app |
+| Artifact Registry | `cloud-run-source-deploy`（最新3世代保持ポリシー適用済み） |
+| シークレット | `GOOGLE_API_KEY`（`APP_PASSCODE` は未設定＝認証なし） |
+| フロントエンド | **未デプロイ** |
+
 ---
 
 ## 1. バックエンド（Cloud Run）
@@ -27,33 +39,47 @@
 
 ```bash
 # 使うプロジェクトとリージョンを決める
-export PROJECT_ID=your-project-id
+export PROJECT_ID=math-app-backend
 export REGION=asia-northeast1
-export REPO=math-app          # Artifact Registry のリポジトリ名
 export SERVICE=math-app-backend
 
 gcloud config set project "$PROJECT_ID"
+gcloud config set run/region "$REGION"
 
-# 必要なAPIを有効化
+# 必要なAPIを有効化（--source デプロイは Cloud Build も使う）
 gcloud services enable \
   run.googleapis.com \
   artifactregistry.googleapis.com \
-  secretmanager.googleapis.com
+  secretmanager.googleapis.com \
+  cloudbuild.googleapis.com
 ```
 
-### 1-2. Artifact Registry のリポジトリ作成
+**課金アカウントの紐付けを先に確認すること。** プロジェクトを作っただけでは
+紐付いていない。未リンクだとデプロイが権限エラーで落ちる。
 
 ```bash
-gcloud artifacts repositories create "$REPO" \
-  --repository-format=docker \
-  --location="$REGION" \
-  --description="math-app のコンテナイメージ"
+gcloud billing projects describe "$PROJECT_ID"   # billingEnabled: true であること
 ```
 
-### 1-3. クリーンアップポリシーを最初に入れる（重要）
+> 課金アカウント1つに紐付けられるプロジェクト数には上限がある（セルフサービスの
+> 既定で5件）。超えていると `Cloud billing quota exceeded` で
+> `gcloud billing projects link` が失敗する。その場合は不要なプロジェクトの
+> 課金を解除するか、コンソールから操作する。
 
-イメージは 644MB ある。デプロイのたびに古いイメージが残ると無料枠のストレージを
-すぐ超えて課金される。**リポジトリを作った直後に設定しておく。**
+### 1-2. Artifact Registry のリポジトリについて
+
+**リポジトリは自分で作らなくてよい。** `gcloud run deploy --source` は
+`cloud-run-source-deploy` という名前のリポジトリを**自動で作る**（初回デプロイ時に
+確認プロンプトが出る）。自分で別名のリポジトリを作っても `--source` デプロイは
+そちらを使わないので、空のまま残るだけになる。
+
+したがって順序は「先にデプロイ（1-5）→ 自動作成されたリポジトリにポリシーを適用」
+になる。**初回デプロイの直後、2回目のデプロイをする前に必ず設定すること。**
+
+### 1-3. クリーンアップポリシー（初回デプロイ直後に必ず入れる）
+
+イメージはレジストリ上で約 158MiB（ローカルの 644MB は非圧縮サイズ）。
+Artifact Registry の無料枠は 0.5GB なので、**4世代目で超過して課金が始まる。**
 
 `cleanup-policy.json` を作る。
 
@@ -70,29 +96,40 @@ gcloud artifacts repositories create "$REPO" \
     "name": "delete-all-others",
     "action": { "type": "Delete" },
     "condition": {
-      "olderThan": "0s"
+      "tagState": "ANY"
     }
   }
 ]
 ```
 
-適用する。
+> `condition` に `"olderThan": "0s"` を書くと `INVALID_ARGUMENT: empty condition` で
+> 弾かれる。0 は「条件なし」と解釈されるため。`tagState: "ANY"` を使うこと。
+
+適用する。リポジトリ名は `--source` デプロイが作った `cloud-run-source-deploy`。
 
 ```bash
+export REPO=cloud-run-source-deploy
+
 # まず dry-run で「何が削除されるか」を確認する
 gcloud artifacts repositories set-cleanup-policies "$REPO" \
   --location="$REGION" \
   --policy=cleanup-policy.json \
   --dry-run
 
-# 問題なければ本適用
+# 問題なければ本適用。--no-dry-run を明示すること
 gcloud artifacts repositories set-cleanup-policies "$REPO" \
   --location="$REGION" \
-  --policy=cleanup-policy.json
+  --policy=cleanup-policy.json \
+  --no-dry-run
 
-# 確認
+# 確認: cleanupPolicyDryRun が出力に現れなければ本番適用されている
 gcloud artifacts repositories describe "$REPO" --location="$REGION"
 ```
+
+> **`--dry-run` はリポジトリの設定として保存される。** 一度 dry-run で流すと
+> `cleanupPolicyDryRun: true` が残り、次に `--dry-run` なしで適用しても
+> **その状態のまま**になる。`--no-dry-run` を明示的に渡して解除すること。
+> `describe` の出力に `cleanupPolicyDryRun` が出ていたら、まだ実際には削除されない。
 
 `Keep` ポリシーが `Delete` より優先されるので、この2つの組み合わせで
 「最新3世代だけ残して他は削除」になる。ポリシーの実行は即時ではなく、
@@ -112,22 +149,26 @@ Artifact Registry 側で非同期に走る。
 `gcloud run services describe` やコンソールで平文が見えてしまう。
 
 ```bash
-# API キーを登録（プロンプトに貼らずファイル経由でもよい）
-printf '%s' 'YOUR_GEMINI_API_KEY' | \
+# API キーを登録（ローカルの .env から読むならこの形）
+set -a; . ../.env; set +a
+printf '%s' "$GOOGLE_API_KEY" | \
   gcloud secrets create GOOGLE_API_KEY --data-file=-
 
-# 公開デモ用の共有パスコードも同様に
+# 公開デモ用の共有パスコードを使う場合のみ（任意）
 printf '%s' 'YOUR_SHARED_PASSCODE' | \
   gcloud secrets create APP_PASSCODE --data-file=-
 
 # Cloud Run のサービスアカウントに読み取り権限を与える
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')
-for s in GOOGLE_API_KEY APP_PASSCODE; do
+for s in GOOGLE_API_KEY; do   # APP_PASSCODE を作ったならここに足す
   gcloud secrets add-iam-policy-binding "$s" \
     --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" \
     --role="roles/secretmanager.secretAccessor"
 done
 ```
+
+`APP_PASSCODE` は任意。設定しなければ認証なしで動き、保護はレートリミットのみに
+なる。URL を知られた時点で誰でも API を叩けるので、**広く共有する前には設定する。**
 
 値を更新するときは新しいバージョンを追加する。
 
@@ -141,6 +182,9 @@ printf '%s' 'NEW_VALUE' | gcloud secrets versions add GOOGLE_API_KEY --data-file
 `backend/` をソースにしてデプロイする。`gcloud run deploy --source` は
 Cloud Build でイメージをビルドして Artifact Registry に push する。
 
+初回は Vercel の URL がまだ無いので、CORS 設定は後回しでよい（curl での確認には
+CORS は関係ない）。まずデプロイして URL を得る。
+
 ```bash
 cd backend
 
@@ -153,8 +197,17 @@ gcloud run deploy "$SERVICE" \
   --min-instances 0 \
   --max-instances 3 \
   --timeout 300 \
-  --set-secrets "GOOGLE_API_KEY=GOOGLE_API_KEY:latest,APP_PASSCODE=APP_PASSCODE:latest" \
-  --set-env-vars "ALLOWED_ORIGINS=https://your-app.vercel.app,ALLOWED_ORIGIN_REGEX=https://your-app-[a-z0-9-]+\.vercel\.app,RATE_LIMIT_PER_MINUTE=20"
+  --set-secrets "GOOGLE_API_KEY=GOOGLE_API_KEY:latest" \
+  --set-env-vars "RATE_LIMIT_PER_MINUTE=20"
+```
+
+Vercel の URL が確定したあと、CORS とパスコードを足す（`APP_PASSCODE` を
+使う場合）。
+
+```bash
+gcloud run services update "$SERVICE" --region="$REGION" \
+  --update-secrets "APP_PASSCODE=APP_PASSCODE:latest" \
+  --update-env-vars "^@^ALLOWED_ORIGINS=https://your-app.vercel.app@ALLOWED_ORIGIN_REGEX=https://your-app-[a-z0-9-]+\.vercel\.app"
 ```
 
 パラメータの意図:
